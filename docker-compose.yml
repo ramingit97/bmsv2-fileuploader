@@ -1,0 +1,23 @@
+version: '3'
+services:
+  fileuploader-service:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    network_mode: "host"  
+    # networks:
+    #   - api-gateway-network
+    #   - fileuploader-network
+    ports:
+      - "9003:9003"
+    volumes:
+      - .:/app
+volumes:
+  data:
+    driver: local
+
+networks:
+  api-gateway-network:
+    external: true
+  fileuploader-network:
+    external: true
