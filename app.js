@@ -11,8 +11,8 @@ const minioClient = new Client({
   endPoint: '0.0.0.0',
   port: 9000,
   useSSL: false,
-  accessKey: 'LVnjcYi2e6zM5EwcArd2',
-  secretKey: 'zlDYZtNxMIQRobr3fFDbyvCgaHaSYTbWsBNst5JA',
+  accessKey: 'jOLrhFSB7ETImLBOcEm5',
+  secretKey: 'QZ20Y9R7z06gSLBwlIRgAmOB8pQDNJ67Gao2qeWY',
 });
 
 const getBuckets = async () => {
@@ -29,30 +29,35 @@ const getBuckets = async () => {
 getBuckets();
 
 
-app.post('/upload', upload.single('files'), async (req, res) => {
+app.post('/upload', upload.array('files'), async (req, res) => {
     try {
-      // Получение информации о загруженном файле
-      const { buffer,...fileInfo } = req.file;
-      console.log("req,",req.file);
+      let fileUrls = [];
   
-    //   Уменьшение размера изображения с помощью Sharp
-      const resizedImageBuffer = await sharp(buffer)
-        .resize({ width: 200 }) // Уменьшаем ширину до 800 пикселей
-        .toBuffer();
-  
-      // Загрузка оригинального изображения в MinIO
-      await minioClient.putObject('bucket-test', fileInfo.originalname, buffer);
-  
-      // Загрузка уменьшенного изображения в MinIO
-      let fileName = `resized_${fileInfo.originalname}`;
-      await minioClient.putObject('bucket-test', fileName, resizedImageBuffer);
-      // Отправка URL-адресов в ответе клиенту
-      let fileUrl = `http://0.0.0.0:9000/${bucket}/${fileName}`
+      for (const fileInfo of req.files) {
+        const buffer = fileInfo.buffer; // Buffer of the original image
+    
+        const resizedImageBuffer = await sharp(buffer)
+          .resize({ width: 200 }) // Resizing width to 200 pixels
+          .toBuffer();
+    
+        await minioClient.putObject(bucket, fileInfo.originalname, buffer);
+    
+        const resizedFileName = `resized_${fileInfo.originalname}`;
+        await minioClient.putObject(bucket, resizedFileName, resizedImageBuffer);
+    
+        const originalUrl = `http://0.0.0.0:9000/${bucket}/${fileInfo.originalname}`;
+        const resizedUrl = `http://0.0.0.0:9000/${bucket}/${resizedFileName}`;
+    
+        delete fileInfo.buffer;
+        fileUrls.push({ 
+          original: originalUrl, resized: resizedUrl,
+          ...fileInfo
+        });
+      }
+    
 
 
-      return res.status(200).json({
-        ...fileInfo,path:fileUrl
-      });
+      return res.status(200).json(fileUrls);
       
     } catch (error) {
       console.error('Error uploading image:', error);

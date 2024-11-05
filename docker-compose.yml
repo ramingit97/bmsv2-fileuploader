@@ -8,8 +8,8 @@ services:
     # networks:
     #   - api-gateway-network
     #   - fileuploader-network
-    ports:
-      - "9003:9003"
+    # ports:
+    #   - "9003:9003"
     volumes:
       - .:/app
 volumes:
